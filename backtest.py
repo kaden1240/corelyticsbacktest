@@ -46,7 +46,7 @@ def run_backtest(
     rsi_min=50, rsi_max=65,
     stoch_k_min=60, stoch_k_max=75,
     start_date="2025-06-01", end_date="2025-09-29",
-    use_rsi=True, use_stoch=True, use_macd=False
+    use_rsi=True, use_stoch=True, use_macd=True
 ):
     # Initialize CSV
     pd.DataFrame(columns=["Date", "Ticker", "Entry", "Exit", "Percent_Return"]).to_csv(RESULTS_CSV, index=False)

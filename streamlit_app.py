@@ -2,13 +2,14 @@ import streamlit as st
 import pandas as pd
 from backtest import run_backtest
 
-st.title("Next Day Edge Backtester")
-st.write("Customize your trading criteria and run a backtest on S&P 500 stocks.")
+st.title("Corelytics Backtester")
+st.write("Customize your trading criteria and run a backtest for your screener.")
 
 # --- User Inputs ---
 st.header("Trading Criteria")
 use_rsi = st.checkbox("Use RSI in criteria", value=False)
 use_stoch = st.checkbox("Use Stoch K in criteria", value=False)
+use_macd = st.checkbox("Use MACD in criteria", value=False)  # <-- new MACD checkbox
 
 rsi_min, rsi_max = None, None
 stoch_k_min, stoch_k_max = None, None
@@ -35,7 +36,10 @@ if st.button("Run Backtest"):
         stoch_k_min=stoch_k_min,
         stoch_k_max=stoch_k_max,
         start_date=start_date.strftime("%Y-%m-%d"),
-        end_date=end_date.strftime("%Y-%m-%d")
+        end_date=end_date.strftime("%Y-%m-%d"),
+        use_rsi=use_rsi,
+        use_stoch=use_stoch,
+        use_macd=use_macd  # <-- pass MACD option
     )
 
     if df.empty:

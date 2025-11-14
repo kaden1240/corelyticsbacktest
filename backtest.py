@@ -12,7 +12,6 @@ for package in packages:
     except ModuleNotFoundError:
         subprocess.check_call([sys.executable, "-m", "pip", "install", package])
 
-# Now import everything
 import yfinance as yf
 import pandas as pd
 import numpy as np
@@ -60,18 +59,19 @@ def run_backtest(
                 continue
 
             df = df.sort_index()
+
+            # Indicators
             df['RSI'] = calculate_rsi(df['Close'], RSI_PERIOD)
+            low14 = df['Low'].rolling(14).min()
+            high14 = df['High'].rolling(14).max()
+            df['Stoch_K'] = ((df['Close'] - low14) / (high14 - low14)) * 100
+            df['Stoch_D'] = df['Stoch_K'].rolling(3).mean()
             ema12 = df['Close'].ewm(span=12, adjust=False).mean()
             ema26 = df['Close'].ewm(span=26, adjust=False).mean()
             df['MACD_Line'] = ema12 - ema26
             df['MACD_Signal'] = df['MACD_Line'].ewm(span=9, adjust=False).mean()
             df['MACD_Hist'] = df['MACD_Line'] - df['MACD_Signal']
             df['Prev_Hist'] = df['MACD_Hist'].shift(1)
-            low14 = df['Low'].rolling(14).min()
-            high14 = df['High'].rolling(14).max()
-            df['Stoch_K'] = ((df['Close'] - low14) / (high14 - low14)) * 100
-            df['Stoch_D'] = df['Stoch_K'].rolling(3).mean()
-            df['avg_volume'] = df['Volume'].rolling(30).mean()
 
             trades = []
             for i in range(len(df)-1):
@@ -80,51 +80,24 @@ def run_backtest(
                 if row.isnull().any():
                     continue
 
-                signal_data = {
-                    "Close": float(row['Close']),
-                    "High": float(row['High']),
-                    "Volume": float(row['Volume']),
-                    "avg_volume": float(row['avg_volume']),
-                    "RSI": float(row['RSI']),
-                    "Stoch_K": float(row['Stoch_K']),
-                    "Stoch_D": float(row['Stoch_D']),
-                    "MACD_Line": float(row['MACD_Line']),
-                    "MACD_Signal": float(row['MACD_Signal']),
-                    "MACD_Hist": float(row['MACD_Hist']),
-                    "Prev_Hist": float(row['Prev_Hist'])
-                }
+                rsi_ok = not use_rsi or (rsi_min < row['RSI'] < rsi_max)
+                stoch_ok = not use_stoch or ((stoch_k_min < row['Stoch_K'] < stoch_k_max) and (row['Stoch_K'] > row['Stoch_D']))
+                macd_ok = not use_macd or ((row['MACD_Line'] > row['MACD_Signal']) and (row['MACD_Hist'] > row['Prev_Hist']))
 
-                # --- Optional criteria checks ---
-                try:
-                    rsi_ok = True
-                    stoch_ok = True
-                    macd_ok = True
+                if rsi_ok and stoch_ok and macd_ok:
+                    entry_price = float(next_day['Open'])
+                    holding_days = 5
+                    exit_day = df.iloc[i + holding_days] if i + holding_days < len(df) else df.iloc[-1]
+                    exit_price = float(exit_day['Close'])
+                    percent_return = (exit_price - entry_price) / entry_price * 100
 
-                    if use_rsi:
-                        rsi_ok = rsi_min < signal_data["RSI"] < rsi_max
-
-                    if use_stoch:
-                        stoch_ok = (stoch_k_min < signal_data["Stoch_K"] < stoch_k_max) and (signal_data["Stoch_K"] > signal_data["Stoch_D"])
-
-                    if use_macd:
-                        macd_ok = (signal_data["MACD_Line"] > signal_data["MACD_Signal"]) and (signal_data["MACD_Hist"] > signal_data["Prev_Hist"])
-
-                    if rsi_ok and stoch_ok and macd_ok:
-                        entry_price = float(next_day['Open'])
-                        holding_days = 5
-                        exit_day = df.iloc[i + holding_days] if i + holding_days < len(df) else df.iloc[-1]
-                        exit_price = float(exit_day['Close'])
-                        percent_return = (exit_price - entry_price) / entry_price * 100
-
-                        trades.append({
-                            "Date": next_day.name.date(),
-                            "Ticker": ticker,
-                            "Entry": entry_price,
-                            "Exit": exit_price,
-                            "Percent_Return": percent_return
-                        })
-                except:
-                    continue
+                    trades.append({
+                        "Date": next_day.name.date(),
+                        "Ticker": ticker,
+                        "Entry": entry_price,
+                        "Exit": exit_price,
+                        "Percent_Return": percent_return
+                    })
 
             if trades:
                 pd.DataFrame(trades).to_csv(RESULTS_CSV, mode='a', header=False, index=False)

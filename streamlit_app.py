@@ -7,8 +7,8 @@ st.write("Customize your trading criteria and run a backtest on S&P 500 stocks."
 
 # --- User Inputs ---
 st.header("Trading Criteria")
-use_rsi = st.checkbox("Use RSI in criteria", value=True)
-use_stoch = st.checkbox("Use Stoch K in criteria", value=True)
+use_rsi = st.checkbox("Use RSI in criteria", value=False)
+use_stoch = st.checkbox("Use Stoch K in criteria", value=False)
 
 rsi_min, rsi_max = None, None
 stoch_k_min, stoch_k_max = None, None

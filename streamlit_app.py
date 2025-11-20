@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from backtest import run_backtest
 
-st.title("Corelytics Backtester")
+st.title("Stock Backtester")
 st.write("Customize your trading criteria and run a backtest for your screener.")
 
 # --- User Inputs ---
